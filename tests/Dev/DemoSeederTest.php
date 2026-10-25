@@ -23,10 +23,10 @@ class DemoSeederTest extends SapphireTest
         $seeder = new DemoSeeder(null, 2026);
         $result = $seeder->run('2026-11-04', 1, 1, 10 * 3600, 'Pflege-Demo-2026!');
 
-        $this->assertCount(count(DemoDataset::CAREGIVERS) + 1, $result['accounts']);
+        $this->assertCount(count(DemoDataset::CAREGIVERS) + 2, $result['accounts']);
         $this->assertSame(count(DemoDataset::CAREGIVERS), Caregiver::get()->count());
         $this->assertSame(
-            count(DemoDataset::CAREGIVERS) + 1,
+            count(DemoDataset::CAREGIVERS) + 2,
             Member::get()->filter('Email:EndsWith', '@' . DemoDataset::EMAIL_DOMAIN)->count()
         );
 

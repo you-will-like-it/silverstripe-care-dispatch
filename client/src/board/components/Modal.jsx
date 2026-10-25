@@ -33,6 +33,7 @@ export function Button({ variant = 'secondary', className = '', ...props }) {
     warning: 'bg-amber-500 text-white hover:bg-amber-600 disabled:bg-amber-500/50',
     secondary: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50',
     ghost: 'text-slate-600 hover:bg-slate-100 disabled:opacity-50',
+    dangerGhost: 'text-red-600 hover:bg-red-50 disabled:opacity-50',
   };
   return <button type="button" className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${styles[variant]} ${className}`} {...props} />;
 }

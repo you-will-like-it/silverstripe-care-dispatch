@@ -32,7 +32,7 @@ class TourTemplateItem extends DataObject
 
     private static string $plural_name = 'Tourstopps';
 
-    private static string $edit_permission = CareDispatchPermissions::MASTERDATA;
+    private static string $edit_permission = CareDispatchPermissions::DISPATCH;
 
     private static array $db = [
         'SortOrder' => 'Int',

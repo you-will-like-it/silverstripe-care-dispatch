@@ -37,7 +37,7 @@ class TourTemplate extends DataObject
 
     private static string $plural_name = 'Tourvorlagen';
 
-    private static string $edit_permission = CareDispatchPermissions::MASTERDATA;
+    private static string $edit_permission = CareDispatchPermissions::DISPATCH;
 
     private static array $db = [
         'Title' => 'Varchar(150)',

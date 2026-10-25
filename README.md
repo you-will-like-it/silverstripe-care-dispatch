@@ -2,7 +2,8 @@
 
 Einsatz- und Tourenplanung für ambulante Pflegedienste auf **Silverstripe CMS 6**.
 
-- **PDL-Board** (React): Zeitleiste je Pflegekraft mit Soll (Dienst) und Ist (Kommen/Pause/Gehen), Drag & Drop aus dem Pool, SOS-Tour-Split, Routenvorschläge.
+- **Backoffice im Frontend** (React, `/pflege`): Einsatzplan, Dienstplan mit Abwesenheiten, Patienten mit Pflegeplan, Tourvorlagen, Team mit Benutzerkonten und Rollen, Zeiten, Leistungskatalog, Protokoll, Einstellungen. Das CMS wird im Alltag nicht benötigt.
+- **Einsatzplan** (PDL-Board): Zeitleiste je Pflegekraft mit Soll (Dienst) und Ist (Kommen/Pause/Gehen), Drag & Drop aus dem Pool, SOS-Tour-Split, Routenvorschläge.
 - **Mobile Ansicht** (`.ss` + Alpine.js): Kommen/Gehen/Pause, eigene Tour, Leistungs-Checkliste, Einsatz starten/abschließen, SOS.
 - **Pflegeplan → Einsätze**: Tourvorlagen und Pflegeplan-Positionen erzeugen die Einsätze des Tages, inklusive Leistungen.
 - **Qualifikationsregeln**: Die Mindestqualifikation eines Einsatzes ergibt sich aus seinen Leistungen. Es gibt harte und weiche Regeln, weiche können mit Begründung übersteuert werden.
@@ -25,17 +26,39 @@ composer require youwilllikeit/silverstripe-care-dispatch
 vendor/bin/sake db:build --flush
 ```
 
+`db:build` legt die Rollen-Gruppen und den Einstellungs-Datensatz an. Den **ersten Benutzer** (z. B. die PDL) legt ein CMS-Administrator einmalig an und weist ihm die Gruppe „Pflegedienstleitung“ zu. Danach läuft alles im Frontend unter `/pflege`.
+
 Eingerichtete Routen:
 
-| URL | Zweck | Berechtigung |
-|---|---|---|
-| `/pflege/board` | PDL-Board | `PFLEGE_DISPATCH_ACCESS` |
-| `/pflege/mobil` | Mobile Ansicht | `PFLEGE_MOBILE_ACCESS` |
-| `/api/dispatch/*` | Board-API (JSON) | `PFLEGE_DISPATCH_ACCESS` |
-| `/api/mobile/*` | Mobile-API (JSON) | `PFLEGE_MOBILE_ACCESS` |
-| `/admin/einsatzplanung` | Stammdaten (ModelAdmin) | CMS-Zugriff + `PFLEGE_MASTERDATA_EDIT` |
+| URL | Zweck |
+|---|---|
+| `/pflege` | Backoffice (Einsatzplan, Dienstplan, Patienten, Tourvorlagen, Team, Zeiten, Leistungen, Protokoll, Einstellungen). Sichtbare Bereiche je nach Berechtigung |
+| `/pflege/mobil` | Mobile Ansicht. Pflegekräfte ohne Backoffice-Rechte werden von `/pflege` hierher umgeleitet |
+| `/api/dispatch/*` | Einsatzplan-API (JSON) |
+| `/api/mobile/*` | Mobile-API (JSON) |
+| `/api/admin/{patients,tasks,templates,staff,roster,time,audit,settings}/*` | Verwaltungs-APIs (JSON) |
+| `/admin/einsatzplanung` | ModelAdmin als technischer Fallback, nur für CMS-Administratoren |
 
-Weitere Berechtigung: `PFLEGE_AUDIT_VIEW` erlaubt das Lesen des Änderungsprotokolls.
+### Rollen und Berechtigungen
+
+Jedes Konto hat genau eine Rolle, vergeben im Bereich **Team**:
+
+| Rolle | Für | Berechtigungen |
+|---|---|---|
+| **Pflegedienstleitung** | PDL und Stellvertretung | alles außer CMS: Einsatzplan, Tourvorlagen, Stammdaten, Pflegeplanung, Dienstplan/Zeiten, Team, Protokoll, Einstellungen, Mobil (falls auch in der Pflege tätig) |
+| **Verwaltung** | Büro / Verwaltungskraft | Patientenstammdaten und Leistungskatalog, Dienstplan und Zeiten (Lohnabrechnung), Team und Konten. Keine Pflegeplanung, kein Einsatzplan, kein Protokoll |
+| **Pflegekraft** | Außendienst | nur mobile Ansicht |
+
+Hintergrund: Die Pflegeplanung ist eine Vorbehaltsaufgabe der Pflegefachkraft (§ 4 PflBG). Deshalb darf nur die PDL-Rolle den Pflegeplan bearbeiten. Patientenaufnahme, Personal und Zeiterfassung liegen in der Praxis oft beim Büro. In kleinen Diensten macht die PDL alles, dann wird die Rolle „Verwaltung“ einfach nicht vergeben.
+
+Codes: `PFLEGE_DISPATCH_ACCESS`, `PFLEGE_MASTERDATA_EDIT`, `PFLEGE_CAREPLAN_EDIT`, `PFLEGE_ROSTER_EDIT`, `PFLEGE_STAFF_MANAGE`, `PFLEGE_AUDIT_VIEW`, `PFLEGE_SETTINGS_EDIT`, `PFLEGE_MOBILE_ACCESS`.
+
+Schutzregeln im Team-Bereich:
+- Eine Rolle kann nur vergeben, wer selbst alle ihre Rechte besitzt. Die Verwaltung kann also keine PDL anlegen.
+- CMS-Administratoren und höher berechtigte Konten sind schreibgeschützt.
+- Die eigene Rolle kann nicht geändert und das eigene Konto nicht deaktiviert werden.
+- Das Passwort setzt PDL oder Verwaltung. Es muss nicht beim ersten Login geändert werden. Beim Setzen wird eine Login-Sperre aufgehoben.
+- „Deaktivieren“ entzieht die Rolle und deaktiviert das Pflegeprofil. Das Konto bleibt für den Audit-Trail erhalten.
 
 Jede Pflegekraft (`Caregiver`) ist mit genau einem `Member` verknüpft. Die mobile API arbeitet ausschließlich mit der Pflegekraft des eingeloggten Kontos.
 
@@ -45,6 +68,8 @@ Jede Pflegekraft (`Caregiver`) ist mit genau einem `Member` verknüpft. Die mobi
 |---|---|
 | `Caregiver` | Qualifikation, Wochenstunden, Führerschein, optionale eigene Startadresse |
 | `Shift` | Dienst (Soll). Ende ≤ Beginn bedeutet Nachtdienst über Mitternacht. Teildienst = zwei Dienste am Tag |
+| `Absence` | Abwesenheit (Urlaub, Krankmeldung, Fortbildung, Frei, Sonstiges), ganze Tage. Storniert die Dienste im Zeitraum, nicht begonnene Touren werden wieder unbesetzt. Laufende Touren werden gemeldet (SOS nutzen). Abwesende sind nicht zuweisbar (harte Regel) und werden nicht automatisch geplant |
+| `CareDispatchSettings` | Einstellungen aus dem Frontend: Firmenstandort (Start/Ende der Routen), Zeitleiste, „Verspätet“-Schwelle, Zugriffsprotokoll |
 | `TimeEntry` | Kommen/Pause/Gehen (Ist), höchstens eine offene Buchung je Pflegekraft |
 | `CareTask` | Leistungskatalog mit Mindestqualifikation und Planzeit |
 | `Patient` | Adresse (geokodiert), Zugangs- und Pflegehinweise, bevorzugte und ausgeschlossene Pflegekräfte |
@@ -65,6 +90,7 @@ Rangfolge: Hilfskraft (1) < Pflegehelfer LG1 (2) < Fachkraft (3). Azubi hat Rang
 
 **Hart** (HTTP 422, nicht übersteuerbar):
 - Qualifikation reicht nicht aus
+- Pflegekraft abwesend (Urlaub, krank …)
 - Azubi als primäre Pflegekraft
 - Pflegekraft vom Patienten ausgeschlossen
 - Pflegekraft inaktiv
@@ -147,11 +173,11 @@ vendor/bin/sake tasks:care-dispatch-seed-demo --reset                  # alles l
 
 Erzeugt einen fiktiven Pflegedienst in Berlin (Prenzlauer Berg, Pankow, Weißensee, Mitte):
 
-- **Konten**: 1 PDL und 8 Pflegekräfte (3 PFK, 2 LG1, 2 PHK, 1 Azubi), Gruppen und Berechtigungen. Alle unter `@demo.care-dispatch.test`, Standardpasswort `Pflege-Demo-2026!` (`--password=…`).
+- **Konten**: PDL, Verwaltung und 8 Pflegekräfte (3 PFK, 2 LG1, 2 PHK, 1 Azubi) mit den Standardrollen. Alle unter `@demo.care-dispatch.test`, Standardpasswort `Pflege-Demo-2026!` (`--password=…`).
 - **Stammdaten**: Leistungskatalog (Beispielcodes, kein offizieller Katalog), 18 Patienten mit Pflegeplänen und Zugangshinweisen, Wünsche (bevorzugt/ausgeschlossen), 5 Tourvorlagen. Eine Vorlage ist ohne Bezugspflegekraft und erscheint im Board als „unbesetzt“.
 - **Vortage** (`--past-days`, Standard 2): generiert, Pool per Routenplaner verteilt, Tagesverlauf vollständig abgespielt. Das ergibt Historie im Änderungsprotokoll.
 - **Präsentationstag** (`--date`, Standard heute): Der Tagesverlauf wird bis `--progress-until` abgespielt. Mögliche Werte: `now` (Standard), `HH:MM`, `none`, `full`.
-- **Folgetage** (`--future-days`, Standard 2): nur geplant.
+- **Folgetage** (`--future-days`, Standard 2): nur geplant. Mia Fischer hat ab übermorgen Urlaub (sichtbar im Dienstplan).
 
 Der Tagesverlauf läuft über die echten Services mit simulierter Uhrzeit und der jeweiligen Pflegekraft als Benutzer (Kommen, Pause, Einsatz starten, Leistungen dokumentieren, abschließen, Gehen). Status, Zeitbuchungen und Audit-Trail sind dadurch konsistent.
 
@@ -174,7 +200,9 @@ Nur über CLI. Im Live-Modus verweigert der Task die Ausführung (Override mit `
 
 **Achtung:** `--reset` leert **alle** Einsatzplanungs-Tabellen, nicht nur die Demo-Daten.
 
-Für „Routen optimieren“ und „Verteilen“ im Board muss `.env` den Firmenstandort enthalten: `CARE_DISPATCH_DEPOT_LAT="52.5386"`, `CARE_DISPATCH_DEPOT_LNG="13.4125"`. Die Demo-Koordinaten sind synthetisch, die Fahrzeiten kommen ohne OSRM aus der Luftlinien-Schätzung.
+Der Seed trägt Firmenname und Firmenstandort in die Einstellungen ein, „Routen optimieren“ und „Verteilen“ funktionieren damit sofort. Die Demo-Koordinaten sind synthetisch, die Fahrzeiten kommen ohne OSRM aus der Luftlinien-Schätzung.
+
+Konten: PDL (`pdl@…`), Verwaltung (`verwaltung@…`) und 8 Pflegekräfte. Am besten mit PDL und Verwaltung in zwei Browsern zeigen, welche Bereiche welche Rolle sieht.
 
 ## Routenoptimierung
 
@@ -191,7 +219,7 @@ An die Routing-Server gehen **nur Koordinaten**, keine Namen oder Pflegedaten. B
 `.env`:
 
 ```dotenv
-CARE_DISPATCH_DEPOT_LAT="52.5200"        # Firmenstandort = Start/Ende der Routen
+CARE_DISPATCH_DEPOT_LAT="52.5200"        # Fallback, falls in Einstellungen kein Firmenstandort
 CARE_DISPATCH_DEPOT_LNG="13.4050"
 CARE_DISPATCH_OSRM_URL="http://osrm:5000"
 CARE_DISPATCH_VROOM_URL="http://vroom:3000"
@@ -228,11 +256,11 @@ Vorschläge ändern nichts. Erst „Übernehmen“ wendet jeden Stopp über die 
 
 ```bash
 npm install
-npm run build      # → client/dist/{board,mobile}.{js,css}
+npm run build      # → client/dist/{app,mobile}.{js,css}
 npm run dev        # Watch-Build mit Sourcemaps
 ```
 
-Vite 8, React 19, dnd-kit, Tailwind 4, Alpine.js 3. Der Einstieg erfolgt über `Requirements::javascript(…, ['type' => 'module'])`. Die Boot-Config (API-URL, CSRF-Token, Datum) liegt als JSON in `data-config`.
+Vite 8, React 19, dnd-kit, Tailwind 4, Alpine.js 3. Das Backoffice ist eine React-App mit clientseitigem Routing unter `/pflege/*` (`client/src/app`). Der Einsatzplan ist eine ihrer Seiten (`client/src/board`). Der Einstieg erfolgt über `Requirements::javascript(…, ['type' => 'module'])`. Die Boot-Config (API-URL, CSRF-Token, Datum) liegt als JSON in `data-config`.
 
 ## Tests
 
@@ -242,6 +270,7 @@ vendor/bin/phpunit vendor/youwilllikeit/silverstripe-care-dispatch/tests
 
 ## Bekannte Grenzen
 
-- Änderungen an `many_many`-Relationen (bevorzugte/ausgeschlossene Pflegekräfte) erscheinen nicht im Feld-Diff des Audit-Trails.
+- Änderungen an bevorzugten/ausgeschlossenen Pflegekräften werden über das Frontend als Ereignis `patient_wishes_changed` protokolliert. Änderungen direkt im CMS erscheinen nicht im Feld-Diff.
+- Wird eine Abwesenheit gelöscht, werden die stornierten Dienste nicht wiederhergestellt.
 - Bei Teildiensten nutzt die Routenoptimierung das Fenster vom ersten Beginn bis zum letzten Ende. Die Pause dazwischen wird nicht als Sperrzeit berücksichtigt.
 - Einsätze über Mitternacht werden nicht unterstützt (Nachtdienste schon).

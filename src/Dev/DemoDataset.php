@@ -15,12 +15,15 @@ final class DemoDataset
 {
     public const EMAIL_DOMAIN = 'demo.care-dispatch.test';
 
-    public const GROUP_PDL = 'care-dispatch-demo-pdl';
-
-    public const GROUP_FIELD = 'care-dispatch-demo-field';
-
     /** Office of the fictional care service = start and end of routes. */
-    public const DEPOT = ['lat' => 52.5386, 'lng' => 13.4125, 'label' => 'Pflegedienst Sonnenschein, Schönhauser Allee 80, 10439 Berlin'];
+    public const DEPOT = [
+        'company' => 'Pflegedienst Sonnenschein (Demo)',
+        'street' => 'Schönhauser Allee 80',
+        'postalCode' => '10439',
+        'city' => 'Berlin',
+        'lat' => 52.5386,
+        'lng' => 13.4125,
+    ];
 
     /** Default time windows per slot. */
     public const SLOT_WINDOWS = [
@@ -31,6 +34,8 @@ final class DemoDataset
     ];
 
     public const PDL = ['first' => 'Sabine', 'last' => 'Krüger', 'email' => 'pdl'];
+
+    public const OFFICE = ['first' => 'Thomas', 'last' => 'Weber', 'email' => 'verwaltung'];
 
     /**
      * key => [first, last, qualification, weekly hours, driving licence, colour, shifts [[type, start, end]], own start [lat, lng]|null]

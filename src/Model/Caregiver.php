@@ -50,7 +50,7 @@ class Caregiver extends DataObject
 
     private static string $plural_name = 'Pflegekräfte';
 
-    private static string $edit_permission = CareDispatchPermissions::MASTERDATA;
+    private static string $edit_permission = CareDispatchPermissions::STAFF;
 
     private static array $db = [
         'QualificationLevel' => QualificationLevel::DB_ENUM_ALL,

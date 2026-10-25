@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 /**
  * Builds two independent bundles into client/dist (exposed via composer "extra.expose"):
  *
- *   board.js / board.css   – React PDL board, mounted on #dispatch-app-root
+ *   app.js / app.css       – React back office (Einsatzplan, Dienstplan, Patienten …), #dispatch-app-root
  *   mobile.js / mobile.css – Alpine.js component for the field staff view
  *
  * Entry files keep stable names because Silverstripe's Requirements API references them
@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
     manifest: false,
     rolldownOptions: {
       input: {
-        board: resolve(import.meta.dirname, 'client/src/board/main.jsx'),
+        app: resolve(import.meta.dirname, 'client/src/app/main.jsx'),
         mobile: resolve(import.meta.dirname, 'client/src/mobile/main.js'),
       },
       output: {

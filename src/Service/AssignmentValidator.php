@@ -9,6 +9,7 @@ use YouWillLikeIT\CareDispatch\Domain\AssignmentCheck;
 use YouWillLikeIT\CareDispatch\Domain\Clock;
 use YouWillLikeIT\CareDispatch\Domain\QualificationLevel;
 use YouWillLikeIT\CareDispatch\Domain\Violation;
+use YouWillLikeIT\CareDispatch\Model\Absence;
 use YouWillLikeIT\CareDispatch\Model\Caregiver;
 use YouWillLikeIT\CareDispatch\Model\DailyTour;
 use YouWillLikeIT\CareDispatch\Model\PatientVisit;
@@ -20,7 +21,7 @@ use YouWillLikeIT\CareDispatch\Model\TimeEntry;
  *
  * Hard rules (never overridable):
  *  - visit must be movable (Pending/Unassigned)
- *  - caregiver active, target tour open and on the visit's date
+ *  - caregiver active and not absent, target tour open and on the visit's date
  *  - primary: rank(caregiver) >= rank(visit requirement); Azubi never primary
  *  - patient has not excluded the caregiver
  *  - companion and primary of a double visit are different people
@@ -57,6 +58,7 @@ class AssignmentValidator
         if (!$caregiver->IsActive) {
             $check->add(Violation::hard(Violation::CAREGIVER_INACTIVE, $caregiver->getTitle() . ' ist nicht aktiv.', $visitID));
         }
+        $this->checkAbsence($check, $visitID, $caregiver, $date);
         if ($targetTour !== null) {
             if (!$targetTour->isOpen()) {
                 $check->add(Violation::hard(
@@ -100,6 +102,10 @@ class AssignmentValidator
 
             return $check;
         }
+        $this->checkAbsence($check, null, $caregiver, (string) $tour->TourDate);
+        if ($check->hasHard()) {
+            return $check;
+        }
         $pending = $tour->Visits()->filter('Status', PatientVisit::STATUS_PENDING)->sort('ScheduledStart');
         foreach ($pending as $visit) {
             $start = Clock::timeToSeconds($visit->ScheduledStart);
@@ -114,6 +120,18 @@ class AssignmentValidator
         $this->checkAttendance($check, null, $caregiver, (string) $tour->TourDate);
 
         return $check;
+    }
+
+    private function checkAbsence(AssignmentCheck $check, ?int $visitID, Caregiver $caregiver, string $date): void
+    {
+        $absence = Absence::on((int) $caregiver->ID, $date);
+        if ($absence !== null) {
+            $check->add(Violation::hard(
+                Violation::CAREGIVER_ABSENT,
+                sprintf('%s ist abwesend (%s bis %s).', $caregiver->getTitle(), $absence->getTypeLabel(), date('d.m.', strtotime((string) $absence->DateTo))),
+                $visitID
+            ));
+        }
     }
 
     private function checkQualification(AssignmentCheck $check, PatientVisit $visit, Caregiver $caregiver): void

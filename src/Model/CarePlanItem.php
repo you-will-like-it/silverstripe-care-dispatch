@@ -52,7 +52,7 @@ class CarePlanItem extends DataObject
 
     private static string $plural_name = 'Pflegeplan';
 
-    private static string $edit_permission = CareDispatchPermissions::MASTERDATA;
+    private static string $edit_permission = CareDispatchPermissions::CAREPLAN;
 
     private static array $db = [
         'Weekdays' => 'Varchar(60)',

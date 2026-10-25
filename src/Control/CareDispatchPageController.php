@@ -6,12 +6,14 @@ namespace YouWillLikeIT\CareDispatch\Control;
 
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\View\Requirements;
+use YouWillLikeIT\CareDispatch\Security\CareDispatchPermissions;
 
 /**
  * Base for the two HTML shells (PDL board and mobile view): login + permission gate,
@@ -21,14 +23,22 @@ abstract class CareDispatchPageController extends Controller
 {
     public const MODULE = 'youwilllikeit/silverstripe-care-dispatch';
 
-    private static string $required_permission = '';
+    /** Permission code(s); with several codes any one suffices. */
+    private static string|array $required_permission = '';
 
     protected function init(): void
     {
         parent::init();
         $member = Security::getCurrentUser();
-        $code = (string) static::config()->get('required_permission');
-        if ($member === null || ($code !== '' && !Permission::checkMember($member, $code))) {
+        $codes = array_values(array_filter((array) static::config()->get('required_permission')));
+        if ($member === null || ($codes !== [] && !Permission::checkMember($member, $codes))) {
+            // Field staff opening the back office are sent to their mobile view.
+            if ($member !== null && !$this instanceof MobileAppController
+                && Permission::checkMember($member, CareDispatchPermissions::MOBILE)) {
+                $redirect = HTTPResponse::create();
+                $redirect->redirect(rtrim(Director::baseURL(), '/') . '/pflege/mobil');
+                throw new HTTPResponse_Exception($redirect);
+            }
             $response = Security::permissionFailure($this, 'Bitte mit einem berechtigten Konto anmelden.');
             throw new HTTPResponse_Exception($response);
         }
@@ -57,6 +67,16 @@ abstract class CareDispatchPageController extends Controller
             'logoutUrl' => Security::logout_url(),
             'member' => ['id' => (int) $member->ID, 'name' => trim($member->FirstName . ' ' . $member->Surname)],
         ];
+    }
+
+    protected function currentMemberOrFail(): Member
+    {
+        $member = Security::getCurrentUser();
+        if ($member === null) {
+            throw new HTTPResponse_Exception(Security::permissionFailure($this));
+        }
+
+        return $member;
     }
 
     /** JSON for a data attribute; escaped by the template (.ATT). */

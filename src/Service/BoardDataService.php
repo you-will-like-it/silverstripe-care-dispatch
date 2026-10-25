@@ -8,6 +8,8 @@ use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
 use YouWillLikeIT\CareDispatch\Domain\Clock;
 use YouWillLikeIT\CareDispatch\Domain\QualificationLevel;
+use YouWillLikeIT\CareDispatch\Model\Absence;
+use YouWillLikeIT\CareDispatch\Model\CareDispatchSettings;
 use YouWillLikeIT\CareDispatch\Model\Caregiver;
 use YouWillLikeIT\CareDispatch\Model\CareTask;
 use YouWillLikeIT\CareDispatch\Model\DailyTour;
@@ -69,7 +71,8 @@ class BoardDataService
         $now = Clock::now();
         $isToday = $date === Clock::today();
         $nowSeconds = Clock::secondsOfDay($now);
-        $lateAfter = (int) static::config()->get('late_after_minutes') * 60;
+        $settings = CareDispatchSettings::current();
+        $lateAfter = (int) ($settings->LateAfterMinutes ?: static::config()->get('late_after_minutes')) * 60;
 
         foreach ($visits as $visit) {
             $patient = $patients[(int) $visit->PatientID] ?? null;
@@ -104,6 +107,7 @@ class BoardDataService
             array_filter(array_map(static fn (DailyTour $t): int => (int) $t->CaregiverID, $tours))
         ));
 
+        $absences = Absence::mapForDate($date);
         $caregiverDtos = [];
         foreach (Caregiver::get()->filterAny(['IsActive' => true, 'ID' => $caregiverIDsOnDuty ?: [0]]) as $caregiver) {
             $id = (int) $caregiver->ID;
@@ -117,7 +121,12 @@ class BoardDataService
                 'rank' => $caregiver->getQualification()->rank(),
                 'drivingLicense' => (bool) $caregiver->DrivingLicense,
                 'isActive' => (bool) $caregiver->IsActive,
-                'onDuty' => in_array($id, $caregiverIDsOnDuty, true),
+                'onDuty' => in_array($id, $caregiverIDsOnDuty, true) && !isset($absences[$id]),
+                'absence' => isset($absences[$id]) ? [
+                    'type' => (string) $absences[$id]->Type,
+                    'label' => $absences[$id]->getTypeLabel(),
+                    'until' => (string) $absences[$id]->DateTo,
+                ] : null,
                 'shifts' => array_map(static fn (Shift $s): array => [
                     'id' => (int) $s->ID,
                     'type' => $s->ShiftType,
@@ -147,8 +156,8 @@ class BoardDataService
             'now' => $now->format(DATE_ATOM),
             'isToday' => $isToday,
             'timeline' => [
-                'start' => (string) static::config()->get('timeline_start'),
-                'end' => (string) static::config()->get('timeline_end'),
+                'start' => (string) ($settings->TimelineStart ?: static::config()->get('timeline_start')),
+                'end' => (string) ($settings->TimelineEnd ?: static::config()->get('timeline_end')),
             ],
             'qualifications' => array_map(static fn (QualificationLevel $q): array => [
                 'value' => $q->value,

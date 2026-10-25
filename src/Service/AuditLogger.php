@@ -14,6 +14,7 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
 use YouWillLikeIT\CareDispatch\Domain\Clock;
 use YouWillLikeIT\CareDispatch\Model\AuditEntry;
+use YouWillLikeIT\CareDispatch\Model\CareDispatchSettings;
 use YouWillLikeIT\CareDispatch\Model\Patient;
 
 /**
@@ -77,7 +78,7 @@ class AuditLogger
     /** Zugriffsprotokoll: logs that the current member viewed a patient record. No-op unless enabled. */
     public function read(int $patientID, string $context): void
     {
-        if (!static::config()->get('log_read_access') || $patientID <= 0) {
+        if ($patientID <= 0 || !$this->readLoggingEnabled()) {
             return;
         }
         $member = Security::getCurrentUser();
@@ -95,6 +96,12 @@ class AuditLogger
             return;
         }
         $this->write(Patient::class, $patientID, $patientID, AuditEntry::ACTION_READ, [], $context);
+    }
+
+    /** Config switch or the frontend setting; either one enables the access log. */
+    public function readLoggingEnabled(): bool
+    {
+        return (bool) static::config()->get('log_read_access') || (bool) CareDispatchSettings::current()->LogReadAccess;
     }
 
     /** Runs $callback without automatic change logging (used for bulk operations that log one event). */

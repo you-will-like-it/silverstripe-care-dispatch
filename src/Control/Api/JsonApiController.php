@@ -30,8 +30,8 @@ use YouWillLikeIT\CareDispatch\Exception\CareDispatchException;
  */
 abstract class JsonApiController extends Controller
 {
-    /** Permission code required for every action of the controller. */
-    private static string $required_permission = '';
+    /** Permission code(s) required for every action of the controller; with several codes any one suffices. */
+    private static string|array $required_permission = '';
 
     protected function init(): void
     {
@@ -41,13 +41,21 @@ abstract class JsonApiController extends Controller
         if ($member === null) {
             throw new HTTPResponse_Exception($this->error(401, 'UNAUTHENTICATED', 'Bitte anmelden.'));
         }
-        $code = (string) static::config()->get('required_permission');
-        if ($code !== '' && !Permission::checkMember($member, $code)) {
+        $codes = array_filter((array) static::config()->get('required_permission'));
+        if ($codes !== [] && !Permission::checkMember($member, array_values($codes))) {
             throw new HTTPResponse_Exception($this->error(403, 'ACCESS_DENIED', 'Keine Berechtigung für diese Aktion.'));
         }
         $request = $this->getRequest();
         if (!$request->isGET() && !$request->isHEAD() && !SecurityToken::inst()->checkRequest($request)) {
             throw new HTTPResponse_Exception($this->error(400, 'CSRF_INVALID', 'Sicherheitstoken ungültig. Bitte Seite neu laden.'));
+        }
+    }
+
+    /** Per-action check; any of the codes suffices. Throws a JSON 403. */
+    protected function requirePermission(string ...$codes): void
+    {
+        if (!Permission::checkMember($this->currentMember(), $codes)) {
+            throw new HTTPResponse_Exception($this->error(403, 'ACCESS_DENIED', 'Keine Berechtigung für diese Aktion.'));
         }
     }
 
@@ -70,9 +78,17 @@ abstract class JsonApiController extends Controller
         } catch (CareDispatchException $e) {
             return $this->error($e->httpStatus(), $e->errorCode(), $e->getMessage(), $e->violations());
         } catch (ValidationException $e) {
-            $messages = array_map(static fn (array $m): string => (string) ($m['message'] ?? ''), $e->getResult()->getMessages());
+            $messages = [];
+            $fields = [];
+            foreach ($e->getResult()->getMessages() as $message) {
+                $text = (string) ($message['message'] ?? '');
+                $messages[] = $text;
+                if (!empty($message['fieldName'])) {
+                    $fields[(string) $message['fieldName']] = $text;
+                }
+            }
 
-            return $this->error(422, 'VALIDATION_FAILED', implode(' ', array_filter($messages)) ?: $e->getMessage());
+            return $this->error(422, 'VALIDATION_FAILED', implode(' ', array_filter($messages)) ?: $e->getMessage(), [], $fields);
         } catch (InvalidArgumentException $e) {
             return $this->error(400, 'BAD_REQUEST', $e->getMessage());
         } catch (HTTPResponse_Exception $e) {
@@ -168,14 +184,18 @@ abstract class JsonApiController extends Controller
         return $response;
     }
 
-    /** @param Violation[] $violations */
-    protected function error(int $status, string $code, string $message, array $violations = []): HTTPResponse
+    /**
+     * @param Violation[]           $violations
+     * @param array<string, string> $fields field name => message (form validation)
+     */
+    protected function error(int $status, string $code, string $message, array $violations = [], array $fields = []): HTTPResponse
     {
         return $this->json([
             'error' => [
                 'code' => $code,
                 'message' => $message,
                 'violations' => $violations,
+                'fields' => (object) $fields,
             ],
         ], $status);
     }

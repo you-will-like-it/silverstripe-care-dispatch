@@ -118,7 +118,7 @@ function CaregiverRow({ caregiver, tours, visitsById, geometry, proposalStops, o
             <p className="truncate text-sm font-semibold text-slate-900">{caregiver.name}</p>
             <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
               <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
-              {ATTENDANCE[status]}
+              {caregiver.absence ? <span className="rounded bg-amber-100 px-1 font-medium text-amber-800">{caregiver.absence.label}</span> : ATTENDANCE[status]}
               <span className="rounded bg-slate-100 px-1 font-medium text-slate-600">{QUALIFICATION_SHORT[caregiver.qualification]}</span>
               {!caregiver.drivingLicense && <span title="Kein Führerschein">🚶</span>}
             </p>
@@ -205,7 +205,7 @@ function UnstaffedTourRow({ tour, visitsById, geometry, caregivers, onOpenVisit,
           <option value="">Pflegekraft zuweisen …</option>
           {caregivers.filter((c) => c.qualification !== 'Azubi').map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name} ({QUALIFICATION_SHORT[c.qualification]}){c.onDuty ? '' : ' – kein Dienst'}
+              {c.name} ({QUALIFICATION_SHORT[c.qualification]}){c.absence ? ` – ${c.absence.label}` : c.onDuty ? '' : ' – kein Dienst'}
             </option>
           ))}
         </select>

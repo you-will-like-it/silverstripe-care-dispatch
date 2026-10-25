@@ -11,7 +11,7 @@ use YouWillLikeIT\CareDispatch\Security\CareDispatchPermissions;
 /**
  * Shared CMS/ORM permission model for all care dispatch records.
  *
- * - View: dispatch, master data or audit permission.
+ * - View: any back-office permission (everything except MOBILE).
  * - Edit/Create/Delete: the permission code in the class's `edit_permission` config
  *   (MASTERDATA for planning data, DISPATCH for operational data).
  *
@@ -28,7 +28,7 @@ trait DispatchPermissions
         }
 
         return (bool) Permission::check(
-            [CareDispatchPermissions::DISPATCH, CareDispatchPermissions::MASTERDATA, CareDispatchPermissions::AUDIT],
+            array_values(array_diff(CareDispatchPermissions::ALL, [CareDispatchPermissions::MOBILE])),
             'any',
             $member
         );

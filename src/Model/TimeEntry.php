@@ -37,7 +37,7 @@ class TimeEntry extends DataObject
 
     private static string $plural_name = 'Zeitbuchungen';
 
-    private static string $edit_permission = CareDispatchPermissions::DISPATCH;
+    private static string $edit_permission = CareDispatchPermissions::ROSTER;
 
     private static array $db = [
         'CheckIn' => 'Datetime',

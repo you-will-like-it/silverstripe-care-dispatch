@@ -22,6 +22,7 @@ final readonly class Violation implements JsonSerializable
     public const AZUBI_AS_PRIMARY = 'AZUBI_AS_PRIMARY';
     public const CAREGIVER_EXCLUDED = 'CAREGIVER_EXCLUDED';
     public const CAREGIVER_INACTIVE = 'CAREGIVER_INACTIVE';
+    public const CAREGIVER_ABSENT = 'CAREGIVER_ABSENT';
     public const VISIT_NOT_MOVABLE = 'VISIT_NOT_MOVABLE';
     public const TOUR_CLOSED = 'TOUR_CLOSED';
     public const DATE_MISMATCH = 'DATE_MISMATCH';

@@ -43,7 +43,7 @@ class Shift extends DataObject
 
     private static string $plural_name = 'Dienste';
 
-    private static string $edit_permission = CareDispatchPermissions::DISPATCH;
+    private static string $edit_permission = CareDispatchPermissions::ROSTER;
 
     private static array $db = [
         'ShiftDate' => 'Date',

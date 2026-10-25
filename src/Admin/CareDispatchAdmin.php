@@ -9,6 +9,7 @@ use SilverStripe\Forms\GridField\GridFieldAddNewButton;
 use SilverStripe\Forms\GridField\GridFieldConfig;
 use SilverStripe\Forms\GridField\GridFieldDeleteAction;
 use SilverStripe\Forms\GridField\GridFieldImportButton;
+use YouWillLikeIT\CareDispatch\Model\Absence;
 use YouWillLikeIT\CareDispatch\Model\AuditEntry;
 use YouWillLikeIT\CareDispatch\Model\CareTask;
 use YouWillLikeIT\CareDispatch\Model\Caregiver;
@@ -19,7 +20,8 @@ use YouWillLikeIT\CareDispatch\Model\TimeEntry;
 use YouWillLikeIT\CareDispatch\Model\TourTemplate;
 
 /**
- * Master data and records in the CMS (/admin/einsatzplanung).
+ * Technical fallback for administrators (/admin/einsatzplanung). Day-to-day administration
+ * happens in the frontend (/pflege/*); the role groups carry no CMS access.
  * Access to the section: "Zugriff auf Bereich Einsatzplanung" (CMS_ACCESS_*); record-level
  * rights come from the PFLEGE_* permissions (see CareDispatchPermissions).
  */
@@ -37,6 +39,7 @@ class CareDispatchAdmin extends ModelAdmin
         'tasks' => ['dataClass' => CareTask::class, 'title' => 'Leistungskatalog'],
         'templates' => ['dataClass' => TourTemplate::class, 'title' => 'Tourvorlagen'],
         'shifts' => ['dataClass' => Shift::class, 'title' => 'Dienstplan'],
+        'absences' => ['dataClass' => Absence::class, 'title' => 'Abwesenheiten'],
         'tours' => ['dataClass' => DailyTour::class, 'title' => 'Tagestouren'],
         'time' => ['dataClass' => TimeEntry::class, 'title' => 'Zeitbuchungen'],
         'audit' => ['dataClass' => AuditEntry::class, 'title' => 'Änderungsprotokoll'],

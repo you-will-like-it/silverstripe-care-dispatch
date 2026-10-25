@@ -8,20 +8,17 @@ use DateInterval;
 use DateTimeImmutable;
 use Random\Engine\Mt19937;
 use Random\Randomizer;
-use SilverStripe\Core\Config\Config;
-use SilverStripe\Core\Environment;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\Queries\SQLDelete;
-use SilverStripe\Security\Group;
 use SilverStripe\Security\Member;
-use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
-use YouWillLikeIT\CareDispatch\Admin\CareDispatchAdmin;
 use YouWillLikeIT\CareDispatch\Domain\Clock;
 use YouWillLikeIT\CareDispatch\Exception\CareDispatchException;
+use YouWillLikeIT\CareDispatch\Model\Absence;
 use YouWillLikeIT\CareDispatch\Model\AuditEntry;
+use YouWillLikeIT\CareDispatch\Model\CareDispatchSettings;
 use YouWillLikeIT\CareDispatch\Model\CarePlanItem;
 use YouWillLikeIT\CareDispatch\Model\CareTask;
 use YouWillLikeIT\CareDispatch\Model\Caregiver;
@@ -35,8 +32,9 @@ use YouWillLikeIT\CareDispatch\Model\TourTemplateItem;
 use YouWillLikeIT\CareDispatch\Model\VisitTask;
 use YouWillLikeIT\CareDispatch\Routing\RoutePlanner;
 use YouWillLikeIT\CareDispatch\Routing\RouteProposalApplier;
-use YouWillLikeIT\CareDispatch\Security\CareDispatchPermissions;
+use YouWillLikeIT\CareDispatch\Security\Roles;
 use YouWillLikeIT\CareDispatch\Service\AttendanceService;
+use YouWillLikeIT\CareDispatch\Service\RosterService;
 use YouWillLikeIT\CareDispatch\Service\TourGenerationService;
 use YouWillLikeIT\CareDispatch\Service\VisitAssignmentService;
 use YouWillLikeIT\CareDispatch\Service\VisitExecutionService;
@@ -44,7 +42,7 @@ use YouWillLikeIT\CareDispatch\Service\VisitExecutionService;
 /**
  * Builds a complete, presentable demo installation:
  *
- * - accounts (PDL + 8 caregivers) with groups and permissions
+ * - accounts (PDL, Verwaltung, 8 caregivers) with the standard role groups
  * - service catalogue, patients with care plans, tour templates, shifts
  * - past days: generated, distributed (route planner), fully executed
  * - presentation day: generated and executed up to a given time (live state on the board)
@@ -101,7 +99,7 @@ final class DemoSeeder
         $tables = [];
         foreach ([
             VisitTask::class, PatientVisit::class, DailyTour::class, TourTemplateItem::class, TourTemplate::class,
-            CarePlanItem::class, TimeEntry::class, Shift::class, Patient::class, CareTask::class, Caregiver::class,
+            CarePlanItem::class, TimeEntry::class, Shift::class, Absence::class, Patient::class, CareTask::class, Caregiver::class,
             AuditEntry::class,
         ] as $class) {
             $tables[] = $schema->tableName($class);
@@ -118,10 +116,7 @@ final class DemoSeeder
         foreach (Member::get()->filter('Email:EndsWith', '@' . DemoDataset::EMAIL_DOMAIN) as $member) {
             $member->delete();
         }
-        foreach (Group::get()->filter('Code', [DemoDataset::GROUP_PDL, DemoDataset::GROUP_FIELD]) as $group) {
-            $group->delete();
-        }
-        $this->say(sprintf('Zurückgesetzt: %d Tabellen geleert, Demo-Konten entfernt.', count($tables)));
+        $this->say(sprintf('Zurückgesetzt: %d Tabellen geleert, Demo-Konten entfernt (Rollen-Gruppen bleiben bestehen).', count($tables)));
     }
 
     /**
@@ -167,6 +162,7 @@ final class DemoSeeder
                 $this->createShifts($d);
                 $cursor = $cursor->add(new DateInterval('P1D'));
             }
+            $this->createAbsences($date);
 
             $cursor = new DateTimeImmutable($first . ' 12:00:00');
             while ($cursor <= $last) {
@@ -209,18 +205,16 @@ final class DemoSeeder
     /** @return array<int, array{name:string, email:string, role:string}> */
     private function createAccounts(string $password): array
     {
-        $pdlGroup = $this->group(DemoDataset::GROUP_PDL, 'Pflegedienstleitung (Demo)', array_merge(
-            [CareDispatchPermissions::DISPATCH, CareDispatchPermissions::MASTERDATA, CareDispatchPermissions::AUDIT],
-            $this->adminAccessCodes()
-        ));
-        $fieldGroup = $this->group(DemoDataset::GROUP_FIELD, 'Pflegekräfte (Demo)', [CareDispatchPermissions::MOBILE]);
-
+        Roles::ensureGroups();
         $accounts = [];
-        $this->pdl = $this->member(DemoDataset::PDL['first'], DemoDataset::PDL['last'], DemoDataset::PDL['email'], $password, $pdlGroup);
-        $accounts[] = ['name' => DemoDataset::PDL['first'] . ' ' . DemoDataset::PDL['last'], 'email' => $this->pdl->Email, 'role' => 'PDL → /pflege/board, /admin/einsatzplanung'];
+        $this->pdl = $this->member(DemoDataset::PDL['first'], DemoDataset::PDL['last'], DemoDataset::PDL['email'], $password, Roles::PDL);
+        $accounts[] = ['name' => DemoDataset::PDL['first'] . ' ' . DemoDataset::PDL['last'], 'email' => $this->pdl->Email, 'role' => 'Pflegedienstleitung → /pflege'];
+
+        $office = $this->member(DemoDataset::OFFICE['first'], DemoDataset::OFFICE['last'], DemoDataset::OFFICE['email'], $password, Roles::OFFICE);
+        $accounts[] = ['name' => DemoDataset::OFFICE['first'] . ' ' . DemoDataset::OFFICE['last'], 'email' => $office->Email, 'role' => 'Verwaltung → /pflege'];
 
         foreach (DemoDataset::CAREGIVERS as $key => [$firstName, $lastName, $qualification]) {
-            $member = $this->member($firstName, $lastName, null, $password, $fieldGroup);
+            $member = $this->member($firstName, $lastName, null, $password, Roles::FIELD);
             $caregiver = Caregiver::create();
             $caregiver->MemberID = (int) $member->ID;
             $this->caregivers[$key] = $caregiver;
@@ -230,32 +224,7 @@ final class DemoSeeder
         return $accounts;
     }
 
-    /** @param string[] $codes */
-    private function group(string $code, string $title, array $codes): Group
-    {
-        $group = Group::get()->filter('Code', $code)->first() ?? Group::create();
-        $group->Title = $title;
-        $group->Code = $code;
-        $group->write();
-        foreach (array_unique($codes) as $permission) {
-            Permission::grant((int) $group->ID, $permission);
-        }
-
-        return $group;
-    }
-
-    /** @return string[] */
-    private function adminAccessCodes(): array
-    {
-        $codes = CareDispatchAdmin::getRequiredPermissions();
-        if ($codes === false || $codes === '' || $codes === []) {
-            return ['CMS_ACCESS_' . CareDispatchAdmin::class];
-        }
-
-        return array_values((array) $codes);
-    }
-
-    private function member(string $firstName, string $lastName, ?string $localPart, string $password, Group $group): Member
+    private function member(string $firstName, string $lastName, ?string $localPart, string $password, string $role): Member
     {
         $local = $localPart ?? $this->slug($firstName) . '.' . $this->slug($lastName);
         $member = Member::create();
@@ -265,7 +234,7 @@ final class DemoSeeder
         $member->Password = $password;
         $member->Locale = 'de_DE';
         $member->write();
-        $group->Members()->add($member);
+        Roles::assign($member, $role);
 
         return $member;
     }
@@ -433,6 +402,19 @@ final class DemoSeeder
                 $shift->write();
             }
         }
+    }
+
+    /** Mia is on holiday from the day after tomorrow (visible in the Dienstplan, cancels her shifts). */
+    private function createAbsences(string $date): void
+    {
+        $from = (new DateTimeImmutable($date))->add(new DateInterval('P2D'));
+        RosterService::singleton()->saveAbsence(null, [
+            'caregiverId' => (int) $this->caregivers['mia']->ID,
+            'type' => 'Urlaub',
+            'from' => $from->format(Clock::DB_DATE),
+            'to' => $from->add(new DateInterval('P4D'))->format(Clock::DB_DATE),
+            'note' => 'Herbsturlaub',
+        ]);
     }
 
     // ------------------------------------------------------------------ planning of past days
@@ -632,13 +614,18 @@ final class DemoSeeder
 
     // ------------------------------------------------------------------ helpers
 
+    /** Company name and office location in the frontend settings (route optimisation works out of the box). */
     private function ensureDepot(): void
     {
-        $configured = (float) (Environment::getEnv('CARE_DISPATCH_DEPOT_LAT') ?: RoutePlanner::config()->get('depot_lat'));
-        if ($configured === 0.0) {
-            Config::modify()->set(RoutePlanner::class, 'depot_lat', DemoDataset::DEPOT['lat']);
-            Config::modify()->set(RoutePlanner::class, 'depot_lng', DemoDataset::DEPOT['lng']);
-        }
+        CareDispatchSettings::flushCached();
+        $settings = CareDispatchSettings::current();
+        $settings->CompanyName = DemoDataset::DEPOT['company'];
+        $settings->DepotStreet = DemoDataset::DEPOT['street'];
+        $settings->DepotPostalCode = DemoDataset::DEPOT['postalCode'];
+        $settings->DepotCity = DemoDataset::DEPOT['city'];
+        $settings->DepotLat = DemoDataset::DEPOT['lat'];
+        $settings->DepotLng = DemoDataset::DEPOT['lng'];
+        $settings->write();
     }
 
     private function attempt(callable $action, string $label): void

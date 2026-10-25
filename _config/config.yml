@@ -47,6 +47,12 @@ YouWillLikeIT\CareDispatch\Model\CarePlanItem:
 YouWillLikeIT\CareDispatch\Model\VisitTask:
   extensions:
     - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\Absence:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\CareDispatchSettings:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
 
 YouWillLikeIT\CareDispatch\Service\AuditLogger:
   # Zugriffsprotokoll: log who opened which patient record. Default: off.

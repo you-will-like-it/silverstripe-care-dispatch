@@ -12,7 +12,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
-use YouWillLikeIT\CareDispatch\Dev\DemoDataset;
 use YouWillLikeIT\CareDispatch\Dev\DemoSeeder;
 use YouWillLikeIT\CareDispatch\Domain\Clock;
 
@@ -108,14 +107,9 @@ class SeedDemoDataTask extends BuildTask
         $output->writeln([
             '',
             '<options=bold>Für die Präsentation</>',
-            '  PDL-Board:   /pflege/board',
+            '  Backoffice:  /pflege  (Einsatzplan, Dienstplan, Patienten, Touren, Team …)',
             '  Mobil:       /pflege/mobil  (als Pflegekraft anmelden, am besten im Handy-Browser)',
-            '  Stammdaten:  /admin/einsatzplanung',
-            sprintf(
-                '  Routenoptimierung braucht den Firmenstandort in .env: CARE_DISPATCH_DEPOT_LAT="%s" CARE_DISPATCH_DEPOT_LNG="%s"',
-                DemoDataset::DEPOT['lat'],
-                DemoDataset::DEPOT['lng']
-            ),
+            '  Firmenstandort ist in den Einstellungen hinterlegt (Routenoptimierung sofort nutzbar).',
         ]);
         if ($result['warnings'] > 0) {
             $output->writeln(sprintf('<comment>%d Hinweis(e) beim Abspielen des Tagesverlaufs (siehe oben).</comment>', $result['warnings']));

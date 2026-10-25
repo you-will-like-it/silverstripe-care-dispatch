@@ -13,6 +13,8 @@ use Throwable;
 use YouWillLikeIT\CareDispatch\Domain\Clock;
 use YouWillLikeIT\CareDispatch\Exception\DomainRuleException;
 use YouWillLikeIT\CareDispatch\Exception\NotFoundException;
+use YouWillLikeIT\CareDispatch\Model\Absence;
+use YouWillLikeIT\CareDispatch\Model\CareDispatchSettings;
 use YouWillLikeIT\CareDispatch\Model\Caregiver;
 use YouWillLikeIT\CareDispatch\Model\DailyTour;
 use YouWillLikeIT\CareDispatch\Model\Patient;
@@ -39,7 +41,7 @@ class RoutePlanner
     use Configurable;
     use Injectable;
 
-    /** Company depot / office (start and end of routes). Env: CARE_DISPATCH_DEPOT_LAT / _LNG */
+    /** Company depot / office (start and end of routes). Settings (frontend) win, then env CARE_DISPATCH_DEPOT_LAT / _LNG, then this. */
     private static float $depot_lat = 0.0;
 
     private static float $depot_lng = 0.0;
@@ -80,7 +82,7 @@ class RoutePlanner
         $caregiver = $tour->Caregiver();
         $vehicle = $this->vehicleFor($caregiver, $date, (int) $tour->ID);
         if ($vehicle === null) {
-            throw new DomainRuleException('NO_DEPOT', 'Kein Startpunkt: Firmenstandort (depot_lat/lng) oder Startadresse der Pflegekraft fehlt.');
+            throw new DomainRuleException('NO_DEPOT', 'Kein Startpunkt: Firmenstandort in den Einstellungen oder Startadresse der Pflegekraft fehlt.');
         }
 
         $jobs = [];
@@ -418,10 +420,11 @@ class RoutePlanner
         $withOpenTour = DailyTour::get()->filter(['TourDate' => $date, 'Status' => DailyTour::OPEN_STATUSES])->column('CaregiverID');
         $interrupted = DailyTour::get()->filter(['TourDate' => $date, 'Status' => DailyTour::STATUS_INTERRUPTED])->column('CaregiverID');
         // A caregiver whose tour was interrupted today (illness, accident) only counts if they still have an open tour.
-        $ids = array_values(array_unique(array_filter(array_merge(
+        $absent = array_keys(Absence::mapForDate($date));
+        $ids = array_values(array_diff(array_unique(array_filter(array_merge(
             array_diff($withShift, $interrupted),
             $withOpenTour
-        ))));
+        ))), $absent));
         if ($ids === []) {
             return [];
         }
@@ -462,6 +465,10 @@ class RoutePlanner
 
     private function depot(): ?GeoPoint
     {
+        $fromSettings = CareDispatchSettings::current()->getDepot();
+        if ($fromSettings !== null) {
+            return $fromSettings;
+        }
         $lat = (float) (Environment::getEnv('CARE_DISPATCH_DEPOT_LAT') ?: static::config()->get('depot_lat'));
         $lng = (float) (Environment::getEnv('CARE_DISPATCH_DEPOT_LNG') ?: static::config()->get('depot_lng'));
         if ($lat === 0.0 && $lng === 0.0) {

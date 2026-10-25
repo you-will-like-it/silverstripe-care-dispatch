@@ -3,11 +3,12 @@
  * uniform error objects.
  */
 export class ApiError extends Error {
-  constructor(status, code, message, violations = []) {
+  constructor(status, code, message, violations = [], fields = {}) {
     super(message);
     this.status = status;
     this.code = code;
     this.violations = violations;
+    this.fields = fields;
   }
 
   /** Soft rule violations: the user may confirm with force + reason. */
@@ -16,8 +17,8 @@ export class ApiError extends Error {
   }
 }
 
-export function createApi(config) {
-  const base = config.apiBase.replace(/\/$/, '');
+export function createApi(config, baseUrl = config.apiBase) {
+  const base = baseUrl.replace(/\/$/, '');
 
   async function request(method, path, { query, body } = {}) {
     const url = new URL(`${base}/${path.replace(/^\//, '')}`, window.location.origin);
@@ -51,7 +52,7 @@ export function createApi(config) {
       if (response.status === 401) {
         window.location.reload();
       }
-      throw new ApiError(response.status, err.code ?? 'HTTP_' + response.status, err.message ?? `Fehler ${response.status}`, err.violations ?? []);
+      throw new ApiError(response.status, err.code ?? 'HTTP_' + response.status, err.message ?? `Fehler ${response.status}`, err.violations ?? [], err.fields ?? {});
     }
     return data;
   }

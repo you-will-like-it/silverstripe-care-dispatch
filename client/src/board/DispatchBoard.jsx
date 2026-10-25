@@ -277,7 +277,6 @@ export default function DispatchBoard({ config }) {
           </select>
           {date >= todayYmd() && <Button onClick={generateDay} disabled={busy}>Tag generieren</Button>}
           <Button onClick={() => load()} disabled={loading} aria-label="Aktualisieren">⟳</Button>
-          {config.adminUrl && <a href={config.adminUrl} className="text-sm text-slate-500 hover:text-slate-800">Stammdaten</a>}
         </div>
       </header>
 

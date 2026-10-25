@@ -4,9 +4,18 @@ After:
   - '#rootroutes'
   - '#coreroutes'
 ---
+# Order matters: more specific rules first.
 SilverStripe\Control\Director:
   rules:
     'api/dispatch': 'YouWillLikeIT\CareDispatch\Control\Api\DispatchApiController'
     'api/mobile': 'YouWillLikeIT\CareDispatch\Control\Api\CaregiverMobileController'
-    'pflege/board': 'YouWillLikeIT\CareDispatch\Control\DispatchBoardController'
+    'api/admin/patients': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\PatientsApiController'
+    'api/admin/tasks': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\TasksApiController'
+    'api/admin/templates': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\TemplatesApiController'
+    'api/admin/staff': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\StaffApiController'
+    'api/admin/roster': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\RosterApiController'
+    'api/admin/time': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\TimeApiController'
+    'api/admin/audit': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\AuditApiController'
+    'api/admin/settings': 'YouWillLikeIT\CareDispatch\Control\Api\Admin\SettingsApiController'
     'pflege/mobil': 'YouWillLikeIT\CareDispatch\Control\MobileAppController'
+    'pflege': 'YouWillLikeIT\CareDispatch\Control\PflegeAppController'

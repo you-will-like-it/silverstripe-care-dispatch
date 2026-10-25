@@ -7,6 +7,7 @@ namespace YouWillLikeIT\CareDispatch\Service;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
 use YouWillLikeIT\CareDispatch\Domain\Clock;
+use YouWillLikeIT\CareDispatch\Model\Absence;
 use YouWillLikeIT\CareDispatch\Model\CarePlanItem;
 use YouWillLikeIT\CareDispatch\Model\DailyTour;
 use YouWillLikeIT\CareDispatch\Model\PatientVisit;
@@ -255,6 +256,12 @@ class TourGenerationService
             return false;
         }
         $caregiver = $template->DefaultCaregiver();
+        $absence = Absence::on((int) $caregiver->ID, $date);
+        if ($absence !== null) {
+            $notes[] = sprintf('%s: %s ist abwesend (%s), Tour bleibt unbesetzt.', $tour->Title, $caregiver->getTitle(), $absence->getTypeLabel());
+
+            return false;
+        }
         $hasShift = Shift::get()->filter([
             'CaregiverID' => $caregiver->ID,
             'ShiftDate' => $date,
