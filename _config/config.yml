@@ -1,0 +1,60 @@
+---
+Name: care-dispatch
+---
+# Data protection default: no geocoding (no address leaves the server).
+# Enable a geocoder in your app config, preferably your own Nominatim instance:
+#
+#   SilverStripe\Core\Injector\Injector:
+#     YouWillLikeIT\CareDispatch\Routing\GeocoderInterface:
+#       class: YouWillLikeIT\CareDispatch\Routing\NominatimGeocoder
+#   YouWillLikeIT\CareDispatch\Routing\NominatimGeocoder:
+#     min_interval: 0   # own instance: no throttling
+SilverStripe\Core\Injector\Injector:
+  YouWillLikeIT\CareDispatch\Routing\GeocoderInterface:
+    class: YouWillLikeIT\CareDispatch\Routing\NullGeocoder
+
+# Audit trail for every domain record (AuditEntry itself is not audited).
+YouWillLikeIT\CareDispatch\Model\Caregiver:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\Shift:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\TimeEntry:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\TourTemplate:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\TourTemplateItem:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\DailyTour:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\Patient:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\PatientVisit:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\CareTask:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\CarePlanItem:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+YouWillLikeIT\CareDispatch\Model\VisitTask:
+  extensions:
+    - YouWillLikeIT\CareDispatch\Extension\AuditableExtension
+
+YouWillLikeIT\CareDispatch\Service\AuditLogger:
+  # Zugriffsprotokoll: log who opened which patient record. Default: off.
+  log_read_access: false
+  read_dedupe_minutes: 15
+
+YouWillLikeIT\CareDispatch\Routing\RoutePlanner:
+  # Company office = start/end of routes (or env CARE_DISPATCH_DEPOT_LAT / CARE_DISPATCH_DEPOT_LNG).
+  depot_lat: 0.0
+  depot_lng: 0.0
+  window_tolerance_minutes: 30

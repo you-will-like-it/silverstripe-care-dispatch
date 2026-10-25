@@ -1,0 +1,12 @@
+---
+Name: care-dispatch-routes
+After:
+  - '#rootroutes'
+  - '#coreroutes'
+---
+SilverStripe\Control\Director:
+  rules:
+    'api/dispatch': 'YouWillLikeIT\CareDispatch\Control\Api\DispatchApiController'
+    'api/mobile': 'YouWillLikeIT\CareDispatch\Control\Api\CaregiverMobileController'
+    'pflege/board': 'YouWillLikeIT\CareDispatch\Control\DispatchBoardController'
+    'pflege/mobil': 'YouWillLikeIT\CareDispatch\Control\MobileAppController'

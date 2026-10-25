@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@source "./";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+}
+
+html, body.cd-body {
+  height: 100%;
+  margin: 0;
+  background: var(--color-slate-100);
+}
+
+#dispatch-app-root {
+  height: 100%;
+}
+
+/* Companion visits: hatched to distinguish from primary visits. */
+.cd-companion {
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.25) 0 6px, transparent 6px 12px);
+}
+
+/* Proposal ghost blocks. */
+.cd-ghost {
+  background: rgb(37 99 235 / 0.08);
+  border: 2px dashed var(--color-brand-600);
+}
+
+.cd-scroll::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.cd-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-slate-300);
+  border-radius: 9999px;
+}

@@ -1,0 +1,124 @@
+SilverStripe\Security\Member:
+  anna:
+    FirstName: Anna
+    Surname: Fach
+    Email: anna@example.test
+  hans:
+    FirstName: Hans
+    Surname: Hilfe
+    Email: hans@example.test
+  azubi:
+    FirstName: Ali
+    Surname: Azubi
+    Email: azubi@example.test
+
+YouWillLikeIT\CareDispatch\Model\Caregiver:
+  anna:
+    Member: =>SilverStripe\Security\Member.anna
+    QualificationLevel: Fachkraft
+    IsActive: true
+  hans:
+    Member: =>SilverStripe\Security\Member.hans
+    QualificationLevel: Hilfskraft
+    IsActive: true
+  azubi:
+    Member: =>SilverStripe\Security\Member.azubi
+    QualificationLevel: Azubi
+    IsActive: true
+
+YouWillLikeIT\CareDispatch\Model\Shift:
+  anna:
+    Caregiver: =>YouWillLikeIT\CareDispatch\Model\Caregiver.anna
+    ShiftDate: '2026-11-02'
+    StartTime: '06:00:00'
+    EndTime: '14:00:00'
+    ShiftType: Frueh
+    Status: Scheduled
+
+YouWillLikeIT\CareDispatch\Model\CareTask:
+  insulin:
+    Code: 'HKP 9'
+    Title: Insulininjektion
+    Category: SGBV
+    MinQualification: Fachkraft
+    DurationMinutes: 10
+  wash:
+    Code: 'LK 1'
+    Title: Ganzwaschung
+    Category: SGBXI
+    MinQualification: Hilfskraft
+    DurationMinutes: 25
+
+YouWillLikeIT\CareDispatch\Model\Patient:
+  mueller:
+    FirstName: Erika
+    Surname: Müller
+    Street: Hauptstr. 1
+    PostalCode: '10115'
+    City: Berlin
+  schmidt:
+    FirstName: Karl
+    Surname: Schmidt
+    Street: Nebenstr. 2
+    PostalCode: '10115'
+    City: Berlin
+  weber:
+    FirstName: Ina
+    Surname: Weber
+    Street: Ringstr. 3
+    PostalCode: '10115'
+    City: Berlin
+
+YouWillLikeIT\CareDispatch\Model\DailyTour:
+  tour:
+    Title: Ruta Centar – Früh
+    TourDate: '2026-11-02'
+    Status: InProgress
+    Caregiver: =>YouWillLikeIT\CareDispatch\Model\Caregiver.anna
+
+YouWillLikeIT\CareDispatch\Model\PatientVisit:
+  done:
+    Patient: =>YouWillLikeIT\CareDispatch\Model\Patient.mueller
+    DailyTour: =>YouWillLikeIT\CareDispatch\Model\DailyTour.tour
+    VisitDate: '2026-11-02'
+    ScheduledStart: '07:00:00'
+    ScheduledEnd: '07:30:00'
+    ActualStart: '2026-11-02 07:02:00'
+    ActualEnd: '2026-11-02 07:28:00'
+    Status: Completed
+    SortOrder: 1
+  running:
+    Patient: =>YouWillLikeIT\CareDispatch\Model\Patient.schmidt
+    DailyTour: =>YouWillLikeIT\CareDispatch\Model\DailyTour.tour
+    VisitDate: '2026-11-02'
+    ScheduledStart: '08:00:00'
+    ScheduledEnd: '08:30:00'
+    ActualStart: '2026-11-02 08:05:00'
+    Status: InProgress
+    SortOrder: 2
+  pending:
+    Patient: =>YouWillLikeIT\CareDispatch\Model\Patient.weber
+    DailyTour: =>YouWillLikeIT\CareDispatch\Model\DailyTour.tour
+    VisitDate: '2026-11-02'
+    ScheduledStart: '09:00:00'
+    ScheduledEnd: '09:30:00'
+    Status: Pending
+    SortOrder: 3
+  pool:
+    Patient: =>YouWillLikeIT\CareDispatch\Model\Patient.weber
+    VisitDate: '2026-11-02'
+    Slot: Mittag
+    ScheduledStart: '12:00:00'
+    ScheduledEnd: '12:20:00'
+    Status: Unassigned
+
+YouWillLikeIT\CareDispatch\Model\VisitTask:
+  insulin:
+    Visit: =>YouWillLikeIT\CareDispatch\Model\PatientVisit.pool
+    CareTask: =>YouWillLikeIT\CareDispatch\Model\CareTask.insulin
+    SortOrder: 1
+  runningWash:
+    Visit: =>YouWillLikeIT\CareDispatch\Model\PatientVisit.running
+    CareTask: =>YouWillLikeIT\CareDispatch\Model\CareTask.wash
+    Status: Done
+    SortOrder: 1

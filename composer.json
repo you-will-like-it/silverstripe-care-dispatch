@@ -1,0 +1,34 @@
+{
+    "name": "youwilllikeit/silverstripe-care-dispatch",
+    "description": "Einsatz- und Tourenplanung für ambulante Pflegedienste: PDL-Board, Incident-Modus (Tour-Split), Routenoptimierung, mobile Ansicht für Pflegekräfte.",
+    "type": "silverstripe-vendormodule",
+    "license": "proprietary",
+    "keywords": ["silverstripe", "pflege", "tourenplanung", "ambulant", "dispatch"],
+    "require": {
+        "php": "^8.3",
+        "silverstripe/framework": "^6.0",
+        "silverstripe/admin": "^3.0",
+        "guzzlehttp/guzzle": "^7.8",
+        "psr/log": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "YouWillLikeIT\\CareDispatch\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "YouWillLikeIT\\CareDispatch\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "expose": [
+            "client/dist"
+        ]
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

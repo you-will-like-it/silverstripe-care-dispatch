@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@source "../../../templates";
+@source "./";
+
+[x-cloak] {
+  display: none !important;
+}
+
+html, body.cd-mobile {
+  margin: 0;
+  background: var(--color-slate-50);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
