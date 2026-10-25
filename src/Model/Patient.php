@@ -244,7 +244,9 @@ class Patient extends DataObject
             || $this->isChanged('PostalCode')
             || $this->isChanged('City')
             || $this->isChanged('Country');
-        if ($addressChanged) {
+        // Coordinates supplied together with the address (import, demo seed) win over geocoding.
+        $explicitCoordinates = ($this->isChanged('Lat') || $this->isChanged('Lng')) && $this->getGeoPoint() !== null;
+        if ($addressChanged && !$explicitCoordinates) {
             $this->geocode();
         }
     }

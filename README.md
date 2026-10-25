@@ -127,6 +127,7 @@ vendor/bin/sake tasks:care-dispatch-generate-tours --date=2026-11-02 --days=7
 vendor/bin/sake tasks:care-dispatch-close-stale-entries --max-hours=14 [--dry-run]
 vendor/bin/sake tasks:care-dispatch-geocode [--all]
 vendor/bin/sake tasks:care-dispatch-purge-audit --years=10 [--dry-run]   # nur CLI
+vendor/bin/sake tasks:care-dispatch-seed-demo [--reset]                   # Demo-Daten, nur CLI
 ```
 
 Cron-Beispiel:
@@ -135,6 +136,45 @@ Cron-Beispiel:
 0 18 * * *  cd /var/www && vendor/bin/sake tasks:care-dispatch-generate-tours --days=2
 30 3 * * *  cd /var/www && vendor/bin/sake tasks:care-dispatch-close-stale-entries
 ```
+
+## Demo-Daten für Präsentationen
+
+```bash
+vendor/bin/sake tasks:care-dispatch-seed-demo                          # heute, Live-Stand bis jetzt
+vendor/bin/sake tasks:care-dispatch-seed-demo --progress-until=09:40   # fixer Demo-Zeitpunkt
+vendor/bin/sake tasks:care-dispatch-seed-demo --reset                  # alles löschen und neu erzeugen
+```
+
+Erzeugt einen fiktiven Pflegedienst in Berlin (Prenzlauer Berg, Pankow, Weißensee, Mitte):
+
+- **Konten**: 1 PDL und 8 Pflegekräfte (3 PFK, 2 LG1, 2 PHK, 1 Azubi), Gruppen und Berechtigungen. Alle unter `@demo.care-dispatch.test`, Standardpasswort `Pflege-Demo-2026!` (`--password=…`).
+- **Stammdaten**: Leistungskatalog (Beispielcodes, kein offizieller Katalog), 18 Patienten mit Pflegeplänen und Zugangshinweisen, Wünsche (bevorzugt/ausgeschlossen), 5 Tourvorlagen. Eine Vorlage ist ohne Bezugspflegekraft und erscheint im Board als „unbesetzt“.
+- **Vortage** (`--past-days`, Standard 2): generiert, Pool per Routenplaner verteilt, Tagesverlauf vollständig abgespielt. Das ergibt Historie im Änderungsprotokoll.
+- **Präsentationstag** (`--date`, Standard heute): Der Tagesverlauf wird bis `--progress-until` abgespielt. Mögliche Werte: `now` (Standard), `HH:MM`, `none`, `full`.
+- **Folgetage** (`--future-days`, Standard 2): nur geplant.
+
+Der Tagesverlauf läuft über die echten Services mit simulierter Uhrzeit und der jeweiligen Pflegekraft als Benutzer (Kommen, Pause, Einsatz starten, Leistungen dokumentieren, abschließen, Gehen). Status, Zeitbuchungen und Audit-Trail sind dadurch konsistent.
+
+Eingebaute Demo-Szenarien am Präsentationstag:
+
+| Szenario | Wo |
+|---|---|
+| Laufender Einsatz, SOS mit Abfrage „abgeschlossen?“ | Touren von Anna, Mehmed, Jonas (Live-Stand am Vormittag, z. B. `--progress-until=09:40`) |
+| „Verspätet“-Warnung | Mehmed Hodžić läuft ~20 Min. hinterher (nur bei `progress-until=now`) |
+| Doppeleinsatz ohne zweite Person | Gerda Neumann (Transfer mit Lifter), Begleitung im Pool → z. B. Azubi Lukas Braun |
+| Harte Regel: Qualifikation | Insulin bei Friedrich Vogel (Pool) auf Mia Fischer (PHK) ziehen → 422 |
+| Harte Regel: Tour-Zuweisung | „Tour Weißensee – Spät“ an Peter Hoffmann (PHK) → 422, an Selma Kovačević (LG1) → ok |
+| Weiche Regel mit Begründung | Einsatz außerhalb des Dienstes einer Pflegekraft ablegen → 409 → Begründung |
+| Ad-hoc-Tour | Pool-Einsatz auf Mia Fischer (Springerin ohne Tour) ziehen |
+| Ausgeschlossene Pflegekraft | Hildegard Hartmann ↔ Peter Hoffmann, Elfriede Meier ↔ Jonas Wagner |
+| Fehlende Geokodierung | Waltraud Simon (`NO_GEO`) |
+| Änderungsprotokoll | Dragica Marić: Metformin-Dosis vor einigen Tagen geändert |
+
+Nur über CLI. Im Live-Modus verweigert der Task die Ausführung (Override mit `--allow-live`).
+
+**Achtung:** `--reset` leert **alle** Einsatzplanungs-Tabellen, nicht nur die Demo-Daten.
+
+Für „Routen optimieren“ und „Verteilen“ im Board muss `.env` den Firmenstandort enthalten: `CARE_DISPATCH_DEPOT_LAT="52.5386"`, `CARE_DISPATCH_DEPOT_LNG="13.4125"`. Die Demo-Koordinaten sind synthetisch, die Fahrzeiten kommen ohne OSRM aus der Luftlinien-Schätzung.
 
 ## Routenoptimierung
 

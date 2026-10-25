@@ -197,7 +197,9 @@ class Caregiver extends DataObject
     protected function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
-        if ($this->isChanged('StartStreet') || $this->isChanged('StartPostalCode') || $this->isChanged('StartCity')) {
+        $addressChanged = $this->isChanged('StartStreet') || $this->isChanged('StartPostalCode') || $this->isChanged('StartCity');
+        $explicitCoordinates = ($this->isChanged('StartLat') || $this->isChanged('StartLng')) && $this->getStartPoint() !== null;
+        if ($addressChanged && !$explicitCoordinates) {
             $this->StartLat = 0.0;
             $this->StartLng = 0.0;
             if ($this->hasOwnStartAddress()) {
